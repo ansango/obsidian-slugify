@@ -27,3 +27,8 @@
 	color: var(--text-error);
 	text-decoration: none;
 }
+
+.slugify-settings-textarea {
+	width: 100%;
+	font-family: var(--font-monospace);
+}

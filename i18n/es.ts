@@ -19,4 +19,10 @@ export default {
 	collisionNote: (n: number) =>
 		`${n} elemento(s) omitido(s) por colisión de nombre con un archivo existente u otro renombrado.`,
 	collisionLabel: "colisión, se omitirá",
+	settingsExcludedFoldersName: "Carpetas excluidas",
+	settingsExcludedFoldersDesc:
+		"Los archivos dentro de estas carpetas (y sus subcarpetas) nunca se incluyen, sin importar cómo se dispare la acción. Una ruta de carpeta por línea.",
+	settingsExcludedFoldersPlaceholder: "plantillas\nadjuntos/inbox",
+	settingsSeparatorName: "Separador",
+	settingsSeparatorDesc: "Carácter usado para sustituir espacios y otros caracteres no alfanuméricos en los nombres slugificados.",
 };

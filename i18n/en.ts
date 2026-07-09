@@ -19,4 +19,10 @@ export default {
 	collisionNote: (n: number) =>
 		`${n} item(s) skipped due to a name collision with an existing or another renamed file.`,
 	collisionLabel: "collision, will be skipped",
+	settingsExcludedFoldersName: "Excluded folders",
+	settingsExcludedFoldersDesc:
+		"Files inside these folders (and their subfolders) are never included, no matter how they're triggered. One folder path per line.",
+	settingsExcludedFoldersPlaceholder: "templates\nattachments/inbox",
+	settingsSeparatorName: "Separator",
+	settingsSeparatorDesc: "Character used to replace spaces and other non-alphanumeric characters in slugified names.",
 };

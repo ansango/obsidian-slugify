@@ -1,5 +1,15 @@
-import { App, Modal, Notice, Plugin, Setting, TAbstractFile, TFile, TFolder } from "obsidian";
+import { App, Modal, Notice, Plugin, PluginSettingTab, Setting, TAbstractFile, TFile, TFolder } from "obsidian";
 import { t } from "./i18n";
+
+interface SlugifySettings {
+	excludedFolders: string[];
+	separator: string;
+}
+
+const DEFAULT_SETTINGS: SlugifySettings = {
+	excludedFolders: [],
+	separator: "-",
+};
 
 interface RenameEntry {
 	file: TFile;
@@ -8,22 +18,37 @@ interface RenameEntry {
 	collision: boolean;
 }
 
-function slugify(name: string): string {
-	return name
-		.normalize("NFD")
-		.replace(/[̀-ͯ]/g, "") // quita acentos
-		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, "-")
-		.replace(/^-+|-+$/g, "")
-		.replace(/-{2,}/g, "-");
+function escapeRegExp(value: string): string {
+	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function getMarkdownFilesUnder(folder: TFolder): TFile[] {
+function slugify(name: string, separator: string): string {
+	const sep = escapeRegExp(separator);
+	return name
+		.normalize("NFD")
+		.replace(/[̀-ͯ]/g, "") // strip accents
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, separator)
+		.replace(new RegExp(`^${sep}+|${sep}+$`, "g"), "")
+		.replace(new RegExp(`${sep}{2,}`, "g"), separator);
+}
+
+function isExcluded(path: string, excludedFolders: string[]): boolean {
+	return excludedFolders.some((folder) => {
+		const normalized = folder.replace(/\/+$/, "");
+		if (!normalized) return false;
+		return path === normalized || path.startsWith(`${normalized}/`);
+	});
+}
+
+function getMarkdownFilesUnder(folder: TFolder, excludedFolders: string[]): TFile[] {
 	const files: TFile[] = [];
 
 	for (const child of folder.children) {
+		if (isExcluded(child.path, excludedFolders)) continue;
+
 		if (child instanceof TFolder) {
-			files.push(...getMarkdownFilesUnder(child));
+			files.push(...getMarkdownFilesUnder(child, excludedFolders));
 		} else if (child instanceof TFile && child.extension === "md") {
 			files.push(child);
 		}
@@ -32,12 +57,14 @@ function getMarkdownFilesUnder(folder: TFolder): TFile[] {
 	return files;
 }
 
-function collectMarkdownFiles(items: TAbstractFile[]): TFile[] {
+function collectMarkdownFiles(items: TAbstractFile[], excludedFolders: string[]): TFile[] {
 	const seen = new Map<string, TFile>();
 
 	for (const item of items) {
+		if (isExcluded(item.path, excludedFolders)) continue;
+
 		const files = item instanceof TFolder
-			? getMarkdownFilesUnder(item)
+			? getMarkdownFilesUnder(item, excludedFolders)
 			: item instanceof TFile && item.extension === "md"
 				? [item]
 				: [];
@@ -48,11 +75,11 @@ function collectMarkdownFiles(items: TAbstractFile[]): TFile[] {
 	return [...seen.values()];
 }
 
-function computeRenames(app: App, files: TFile[]): RenameEntry[] {
+function computeRenames(app: App, files: TFile[], separator: string): RenameEntry[] {
 	const renames: RenameEntry[] = [];
 
 	for (const file of files) {
-		const slug = slugify(file.basename);
+		const slug = slugify(file.basename, separator);
 		if (!slug || slug === file.basename) continue;
 
 		const parentPath = file.parent && file.parent.path !== "/" ? `${file.parent.path}/` : "";
@@ -144,12 +171,68 @@ class SlugifyModal extends Modal {
 	}
 }
 
+class SlugifySettingTab extends PluginSettingTab {
+	private plugin: SlugifyPlugin;
+
+	constructor(app: App, plugin: SlugifyPlugin) {
+		super(app, plugin);
+		this.plugin = plugin;
+	}
+
+	display(): void {
+		const { containerEl } = this;
+		containerEl.empty();
+
+		new Setting(containerEl)
+			.setName(t.settingsExcludedFoldersName)
+			.setDesc(t.settingsExcludedFoldersDesc)
+			.addTextArea((textArea) => {
+				textArea
+					.setPlaceholder(t.settingsExcludedFoldersPlaceholder)
+					.setValue(this.plugin.settings.excludedFolders.join("\n"))
+					.onChange(async (value) => {
+						this.plugin.settings.excludedFolders = value
+							.split("\n")
+							.map((line) => line.trim())
+							.filter((line) => line.length > 0);
+						await this.plugin.saveSettings();
+					});
+				textArea.inputEl.rows = 6;
+				textArea.inputEl.addClass("slugify-settings-textarea");
+			});
+
+		new Setting(containerEl)
+			.setName(t.settingsSeparatorName)
+			.setDesc(t.settingsSeparatorDesc)
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption("-", "-")
+					.addOption("_", "_")
+					.setValue(this.plugin.settings.separator)
+					.onChange(async (value) => {
+						this.plugin.settings.separator = value;
+						await this.plugin.saveSettings();
+					})
+			);
+	}
+}
+
 export default class SlugifyPlugin extends Plugin {
+	settings: SlugifySettings;
+
 	async onload() {
+		await this.loadSettings();
+		this.addSettingTab(new SlugifySettingTab(this.app, this));
+
 		this.addCommand({
 			id: "slugify-vault-filenames",
 			name: t.commandName,
-			callback: () => this.runSlugify(this.app.vault.getMarkdownFiles(), t.scopeVault),
+			callback: () => {
+				const files = this.app.vault
+					.getMarkdownFiles()
+					.filter((f) => !isExcluded(f.path, this.settings.excludedFolders));
+				this.runSlugify(files, t.scopeVault);
+			},
 		});
 
 		this.registerEvent(
@@ -163,7 +246,7 @@ export default class SlugifyPlugin extends Plugin {
 						.setTitle(isFolder ? t.menuFolder : t.menuFile)
 						.setIcon("case-sensitive")
 						.onClick(() => {
-							const files = collectMarkdownFiles([file]);
+							const files = collectMarkdownFiles([file], this.settings.excludedFolders);
 							this.runSlugify(files, isFolder ? t.scopeFolder(file.name) : t.scopeFile(file.name));
 						});
 				});
@@ -180,7 +263,7 @@ export default class SlugifyPlugin extends Plugin {
 						.setTitle(t.menuSelection(relevant.length))
 						.setIcon("case-sensitive")
 						.onClick(() => {
-							const mdFiles = collectMarkdownFiles(relevant);
+							const mdFiles = collectMarkdownFiles(relevant, this.settings.excludedFolders);
 							this.runSlugify(mdFiles, t.scopeSelection(relevant.length));
 						});
 				});
@@ -190,8 +273,16 @@ export default class SlugifyPlugin extends Plugin {
 
 	onunload() {}
 
+	async loadSettings() {
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+	}
+
+	async saveSettings() {
+		await this.saveData(this.settings);
+	}
+
 	private runSlugify(files: TFile[], scopeLabel: string) {
-		const renames = computeRenames(this.app, files);
+		const renames = computeRenames(this.app, files, this.settings.separator || "-");
 
 		if (renames.length === 0) {
 			new Notice(t.noticeNothingToRename(scopeLabel));
