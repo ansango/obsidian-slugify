@@ -1,0 +1,45 @@
+.slugify-list {
+	max-height: 300px;
+	overflow-y: auto;
+	font-family: var(--font-monospace);
+	font-size: var(--font-smaller);
+	margin-bottom: 1em;
+}
+
+.slugify-row {
+	margin-bottom: 0.25em;
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 0.15em;
+}
+
+.slugify-edit-input {
+	color: var(--text-accent);
+	font-family: var(--font-monospace);
+	font-size: var(--font-smaller);
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	padding: 0 0.25em;
+	min-width: 4em;
+	flex: 1 1 auto;
+}
+
+.slugify-collision-note {
+	color: var(--text-error);
+}
+
+.slugify-row-collision {
+	text-decoration: line-through;
+	color: var(--text-muted);
+}
+
+.slugify-collision-label {
+	color: var(--text-error);
+	text-decoration: none;
+}
+
+.slugify-settings-textarea {
+	width: 100%;
+	font-family: var(--font-monospace);
+}

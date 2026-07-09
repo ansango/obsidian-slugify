@@ -1,5 +1,6 @@
 import esbuild from "esbuild";
 import process from "process";
+import { copyFileSync } from "fs";
 import builtins from "builtin-modules";
 
 const banner = `/*
@@ -10,9 +11,18 @@ if you want to view the source, please visit the github repository of this plugi
 
 const prod = process.argv[2] === "production";
 
+const copyStylesPlugin = {
+	name: "copy-styles",
+	setup(build) {
+		build.onEnd(() => {
+			copyFileSync("src/styles/styles.css", "styles.css");
+		});
+	},
+};
+
 const context = await esbuild.context({
 	banner: { js: banner },
-	entryPoints: ["main.ts"],
+	entryPoints: ["src/core/main.ts"],
 	bundle: true,
 	external: [
 		"obsidian",
@@ -37,6 +47,7 @@ const context = await esbuild.context({
 	treeShaking: true,
 	outfile: "main.js",
 	minify: prod,
+	plugins: [copyStylesPlugin],
 });
 
 if (prod) {

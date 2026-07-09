@@ -1,5 +1,6 @@
 export default {
 	commandName: "Renombrar archivos a slug-case (vault completo)",
+	ribbonTooltip: "Slugify: renombrar archivos a slug-case (vault completo)",
 	scopeVault: "todo el vault",
 	menuFolder: "Slugify: renombrar archivos de esta carpeta",
 	menuFile: "Slugify: renombrar este archivo",

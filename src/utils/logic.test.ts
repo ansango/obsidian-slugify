@@ -7,7 +7,7 @@ import {
 	annotateCollisions,
 	type FileLike,
 	type VaultLike,
-} from "../logic";
+} from "./logic";
 
 function file(path: string, extension = "md"): FileLike {
 	const slash = path.lastIndexOf("/");
