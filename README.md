@@ -1,6 +1,7 @@
 # Obsidian Slugify
 
 [![CI](https://github.com/ansango/obsidian-slugify/actions/workflows/ci.yml/badge.svg)](https://github.com/ansango/obsidian-slugify/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/ansango/obsidian-slugify)](https://github.com/ansango/obsidian-slugify/releases/latest)
 
 Rename files — and everything that links to them — to slug-case (lowercase, no accents, hyphens) right from Obsidian. No script, no terminal: pick a file, a folder, or a multi-selection, review the list, edit it if needed, confirm.
 
@@ -29,16 +30,31 @@ Not yet on the Community Plugins list — manual install:
 
 ## Usage
 
-- **Command palette** → "Rename files to slug-case (whole vault)" or "Undo last slugify".
+- **Ribbon icon** (sidebar) or **command palette** → "Rename files to slug-case (whole vault)".
+- **Command palette** → "Undo last slugify".
 - **Right-click a folder** → "Slugify: rename files in this folder".
 - **Right-click a file** → "Slugify: rename this file".
 - **Select multiple files/folders**, right-click → "Slugify: rename selection (N items)".
 
 In every case a modal shows the full list of renames — editable — before anything is applied.
 
+## Settings
+
+- **Excluded folders** — one path per line; files inside them (and their subfolders) are always skipped, everywhere.
+- **Separator** — `-` or `_`, used in place of spaces and other non-alphanumeric characters.
+- **Include attachments** — off by default. When enabled, non-markdown files (images, PDFs, etc.) become eligible for renaming too, and the file/folder/selection context menu items apply to them as well.
+
 ## Permissions
 
 The plugin calls `vault.getFiles()` / `vault.getMarkdownFiles()` to enumerate files in the vault. This is required for its core function (finding which files to rename) — it never reads file contents or sends anything over the network.
+
+## Verifying a release
+
+`main.js` and `styles.css` in each release are signed with [GitHub artifact attestations](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations), proving they were built by this repo's `release.yml` workflow from the tagged source. Verify a downloaded asset with the [GitHub CLI](https://cli.github.com/):
+
+```bash
+gh attestation verify main.js --repo ansango/obsidian-slugify
+```
 
 ## Development
 
