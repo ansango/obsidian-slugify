@@ -1,11 +1,11 @@
 {
 	"name": "slugify",
-	"version": "1.0.6",
+	"version": "1.0.7",
 	"description": "Rename files to slug-case and automatically update links.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "bun esbuild.config.mjs",
-		"build": "tsc -noEmit -skipLibCheck && bun esbuild.config.mjs production",
+		"build": "bunx tsc -noEmit -skipLibCheck && bun esbuild.config.mjs production",
 		"test": "bun test"
 	},
 	"license": "MIT",

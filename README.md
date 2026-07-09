@@ -1,5 +1,7 @@
 # Obsidian Slugify
 
+[![CI](https://github.com/ansango/obsidian-slugify/actions/workflows/ci.yml/badge.svg)](https://github.com/ansango/obsidian-slugify/actions/workflows/ci.yml)
+
 Rename files — and everything that links to them — to slug-case (lowercase, no accents, hyphens) right from Obsidian. No script, no terminal: pick a file, a folder, or a multi-selection, review the list, edit it if needed, confirm.
 
 ## Why
