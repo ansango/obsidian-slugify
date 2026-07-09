@@ -36,6 +36,10 @@ Not yet on the Community Plugins list — manual install:
 
 In every case a modal shows the full list of renames — editable — before anything is applied.
 
+## Permissions
+
+The plugin calls `vault.getFiles()` / `vault.getMarkdownFiles()` to enumerate files in the vault. This is required for its core function (finding which files to rename) — it never reads file contents or sends anything over the network.
+
 ## Development
 
 Uses [Bun](https://bun.sh) for both package management and running scripts. Bundling still goes through esbuild (the approach recommended by Obsidian's plugin docs).
@@ -47,7 +51,11 @@ bun run build   # type-check + production build (minified, no sourcemap)
 bun test        # run the test suite
 ```
 
-The plugin is plain TypeScript + the Obsidian API — no UI framework. Pure logic (slugify, collision detection) lives in `logic.ts`, decoupled from Obsidian's types so it can be unit tested directly with `bun:test`. Localized strings live in `i18n/en.ts` and `i18n/es.ts`.
+The plugin is plain TypeScript + the Obsidian API — no UI framework, structured under `src/`:
+
+- `src/core/` — the Plugin entry point, the confirmation modal, the settings tab, and vault file-tree helpers.
+- `src/utils/` — pure logic (slugify, collision detection) decoupled from Obsidian's types so it's unit-testable with `bun:test` (colocated as `logic.test.ts`), plus the English/Spanish translations.
+- `src/styles/` — the plugin's CSS, copied to the plugin root on every build.
 
 ## License
 

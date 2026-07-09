@@ -15,15 +15,17 @@ export default class SlugifyPlugin extends Plugin {
 		this.addSettingTab(new SlugifySettingTab(this.app, this));
 
 		this.addCommand({
-			id: "slugify-vault-filenames",
+			id: "vault-filenames",
 			name: t.commandName,
 			callback: () => this.runVaultSlugify(),
 		});
 
 		this.addCommand({
-			id: "slugify-undo-last",
+			id: "undo-last",
 			name: t.undoCommandName,
-			callback: () => this.undoLastBatch(),
+			callback: () => {
+				void this.undoLastBatch();
+			},
 		});
 
 		this.addRibbonIcon("case-sensitive", t.ribbonTooltip, () => this.runVaultSlugify());
@@ -69,7 +71,8 @@ export default class SlugifyPlugin extends Plugin {
 	onunload() {}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		const loaded = (await this.loadData()) as Partial<SlugifySettings> | null;
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, loaded);
 	}
 
 	async saveSettings() {
@@ -96,7 +99,9 @@ export default class SlugifyPlugin extends Plugin {
 			this.app,
 			renames,
 			t.modalHeading(renames.length, scopeLabel),
-			() => this.applyRenames(renames)
+			() => {
+				void this.applyRenames(renames);
+			}
 		).open();
 	}
 

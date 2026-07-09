@@ -1,6 +1,6 @@
 {
 	"name": "slugify",
-	"version": "1.0.8",
+	"version": "1.0.9",
 	"description": "Rename files to slug-case and automatically update links.",
 	"main": "main.js",
 	"scripts": {
@@ -12,7 +12,6 @@
 	"devDependencies": {
 		"@types/bun": "latest",
 		"@types/node": "^20.0.0",
-		"builtin-modules": "^3.3.0",
 		"esbuild": "0.19.11",
 		"obsidian": "latest",
 		"tslib": "2.4.0",
