@@ -28,7 +28,7 @@ export default class SlugifyPlugin extends Plugin {
 			},
 		});
 
-		this.addRibbonIcon("case-sensitive", t.ribbonTooltip, () => this.runVaultSlugify());
+		this.addRibbonIcon("worm", t.ribbonTooltip, () => this.runVaultSlugify());
 
 		this.registerEvent(
 			this.app.workspace.on("file-menu", (menu, file) => {
@@ -39,7 +39,7 @@ export default class SlugifyPlugin extends Plugin {
 				menu.addItem((item) => {
 					item
 						.setTitle(isFolder ? t.menuFolder : t.menuFile)
-						.setIcon("case-sensitive")
+						.setIcon("worm")
 						.onClick(() => {
 							const files = collectFiles([file], this.settings.excludedFolders, this.settings.includeAttachments);
 							this.runSlugify(files, isFolder ? t.scopeFolder(file.name) : t.scopeFile(file.name));
@@ -58,7 +58,7 @@ export default class SlugifyPlugin extends Plugin {
 				menu.addItem((item) => {
 					item
 						.setTitle(t.menuSelection(relevant.length))
-						.setIcon("case-sensitive")
+						.setIcon("worm")
 						.onClick(() => {
 							const targetFiles = collectFiles(relevant, this.settings.excludedFolders, this.settings.includeAttachments);
 							this.runSlugify(targetFiles, t.scopeSelection(relevant.length));
