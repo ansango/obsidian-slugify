@@ -4,11 +4,13 @@ import { t } from "./i18n";
 interface SlugifySettings {
 	excludedFolders: string[];
 	separator: string;
+	includeAttachments: boolean;
 }
 
 const DEFAULT_SETTINGS: SlugifySettings = {
 	excludedFolders: [],
 	separator: "-",
+	includeAttachments: false,
 };
 
 interface RenameEntry {
@@ -48,15 +50,19 @@ function isExcluded(path: string, excludedFolders: string[]): boolean {
 	});
 }
 
-function getMarkdownFilesUnder(folder: TFolder, excludedFolders: string[]): TFile[] {
+function isRenamableFile(file: TFile, includeAttachments: boolean): boolean {
+	return includeAttachments || file.extension === "md";
+}
+
+function getFilesUnder(folder: TFolder, excludedFolders: string[], includeAttachments: boolean): TFile[] {
 	const files: TFile[] = [];
 
 	for (const child of folder.children) {
 		if (isExcluded(child.path, excludedFolders)) continue;
 
 		if (child instanceof TFolder) {
-			files.push(...getMarkdownFilesUnder(child, excludedFolders));
-		} else if (child instanceof TFile && child.extension === "md") {
+			files.push(...getFilesUnder(child, excludedFolders, includeAttachments));
+		} else if (child instanceof TFile && isRenamableFile(child, includeAttachments)) {
 			files.push(child);
 		}
 	}
@@ -64,15 +70,15 @@ function getMarkdownFilesUnder(folder: TFolder, excludedFolders: string[]): TFil
 	return files;
 }
 
-function collectMarkdownFiles(items: TAbstractFile[], excludedFolders: string[]): TFile[] {
+function collectFiles(items: TAbstractFile[], excludedFolders: string[], includeAttachments: boolean): TFile[] {
 	const seen = new Map<string, TFile>();
 
 	for (const item of items) {
 		if (isExcluded(item.path, excludedFolders)) continue;
 
 		const files = item instanceof TFolder
-			? getMarkdownFilesUnder(item, excludedFolders)
-			: item instanceof TFile && item.extension === "md"
+			? getFilesUnder(item, excludedFolders, includeAttachments)
+			: item instanceof TFile && isRenamableFile(item, includeAttachments)
 				? [item]
 				: [];
 
@@ -251,6 +257,16 @@ class SlugifySettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
+
+		new Setting(containerEl)
+			.setName(t.settingsIncludeAttachmentsName)
+			.setDesc(t.settingsIncludeAttachmentsDesc)
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.includeAttachments).onChange(async (value) => {
+					this.plugin.settings.includeAttachments = value;
+					await this.plugin.saveSettings();
+				})
+			);
 	}
 }
 
@@ -271,9 +287,10 @@ export default class SlugifyPlugin extends Plugin {
 			id: "slugify-vault-filenames",
 			name: t.commandName,
 			callback: () => {
-				const files = this.app.vault
-					.getMarkdownFiles()
-					.filter((f) => !isExcluded(f.path, this.settings.excludedFolders));
+				const allFiles = this.settings.includeAttachments
+					? this.app.vault.getFiles()
+					: this.app.vault.getMarkdownFiles();
+				const files = allFiles.filter((f) => !isExcluded(f.path, this.settings.excludedFolders));
 				this.runSlugify(files, t.scopeVault);
 			},
 		});
@@ -287,15 +304,15 @@ export default class SlugifyPlugin extends Plugin {
 		this.registerEvent(
 			this.app.workspace.on("file-menu", (menu, file) => {
 				const isFolder = file instanceof TFolder;
-				const isMarkdown = file instanceof TFile && file.extension === "md";
-				if (!isFolder && !isMarkdown) return;
+				const isRenamable = file instanceof TFile && isRenamableFile(file, this.settings.includeAttachments);
+				if (!isFolder && !isRenamable) return;
 
 				menu.addItem((item) => {
 					item
 						.setTitle(isFolder ? t.menuFolder : t.menuFile)
 						.setIcon("case-sensitive")
 						.onClick(() => {
-							const files = collectMarkdownFiles([file], this.settings.excludedFolders);
+							const files = collectFiles([file], this.settings.excludedFolders, this.settings.includeAttachments);
 							this.runSlugify(files, isFolder ? t.scopeFolder(file.name) : t.scopeFile(file.name));
 						});
 				});
@@ -304,7 +321,9 @@ export default class SlugifyPlugin extends Plugin {
 
 		this.registerEvent(
 			this.app.workspace.on("files-menu", (menu, files) => {
-				const relevant = files.filter((f) => f instanceof TFolder || (f instanceof TFile && f.extension === "md"));
+				const relevant = files.filter(
+					(f) => f instanceof TFolder || (f instanceof TFile && isRenamableFile(f, this.settings.includeAttachments))
+				);
 				if (relevant.length === 0) return;
 
 				menu.addItem((item) => {
@@ -312,8 +331,8 @@ export default class SlugifyPlugin extends Plugin {
 						.setTitle(t.menuSelection(relevant.length))
 						.setIcon("case-sensitive")
 						.onClick(() => {
-							const mdFiles = collectMarkdownFiles(relevant, this.settings.excludedFolders);
-							this.runSlugify(mdFiles, t.scopeSelection(relevant.length));
+							const targetFiles = collectFiles(relevant, this.settings.excludedFolders, this.settings.includeAttachments);
+							this.runSlugify(targetFiles, t.scopeSelection(relevant.length));
 						});
 				});
 			})

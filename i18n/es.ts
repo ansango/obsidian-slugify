@@ -26,6 +26,9 @@ export default {
 	settingsExcludedFoldersPlaceholder: "plantillas\nadjuntos/inbox",
 	settingsSeparatorName: "Separador",
 	settingsSeparatorDesc: "Carácter usado para sustituir espacios y otros caracteres no alfanuméricos en los nombres slugificados.",
+	settingsIncludeAttachmentsName: "Incluir adjuntos",
+	settingsIncludeAttachmentsDesc:
+		"Renombrar también archivos que no son markdown (imágenes, PDFs, etc.), no solo notas. Los enlaces/embeds que apuntan a ellos también se actualizan.",
 	undoCommandName: "Deshacer último slugify",
 	noticeNothingToUndo: "Nada que deshacer: no hay ningún lote de slugify desde que se abrió Obsidian.",
 	noticeUndoDone: (n: number) => `${n} archivo(s) restaurado(s) a su nombre anterior.`,
