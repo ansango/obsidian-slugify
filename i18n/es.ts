@@ -26,4 +26,9 @@ export default {
 	settingsExcludedFoldersPlaceholder: "plantillas\nadjuntos/inbox",
 	settingsSeparatorName: "Separador",
 	settingsSeparatorDesc: "Carácter usado para sustituir espacios y otros caracteres no alfanuméricos en los nombres slugificados.",
+	undoCommandName: "Deshacer último slugify",
+	noticeNothingToUndo: "Nada que deshacer: no hay ningún lote de slugify desde que se abrió Obsidian.",
+	noticeUndoDone: (n: number) => `${n} archivo(s) restaurado(s) a su nombre anterior.`,
+	noticeUndoDoneWithSkipped: (done: number, skipped: number) =>
+		`${done} archivo(s) restaurado(s), ${skipped} omitido(s) (ver consola).`,
 };

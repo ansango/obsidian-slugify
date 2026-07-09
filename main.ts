@@ -254,8 +254,14 @@ class SlugifySettingTab extends PluginSettingTab {
 	}
 }
 
+interface UndoEntry {
+	oldPath: string;
+	newPath: string;
+}
+
 export default class SlugifyPlugin extends Plugin {
 	settings: SlugifySettings;
+	private lastBatch: UndoEntry[] | null = null;
 
 	async onload() {
 		await this.loadSettings();
@@ -270,6 +276,12 @@ export default class SlugifyPlugin extends Plugin {
 					.filter((f) => !isExcluded(f.path, this.settings.excludedFolders));
 				this.runSlugify(files, t.scopeVault);
 			},
+		});
+
+		this.addCommand({
+			id: "slugify-undo-last",
+			name: t.undoCommandName,
+			callback: () => this.undoLastBatch(),
 		});
 
 		this.registerEvent(
@@ -335,8 +347,8 @@ export default class SlugifyPlugin extends Plugin {
 	}
 
 	private async applyRenames(renames: RenameEntry[]) {
-		let done = 0;
 		let skipped = 0;
+		const succeeded: UndoEntry[] = [];
 
 		for (const entry of renames) {
 			if (entry.collision) {
@@ -351,17 +363,64 @@ export default class SlugifyPlugin extends Plugin {
 				// fileManager.renameFile automatically updates links pointing
 				// to this file across the rest of the vault.
 				await this.app.fileManager.renameFile(entry.file, entry.newPath);
-				done++;
+				succeeded.push({ oldPath: entry.oldPath, newPath: entry.newPath });
 			} catch (err) {
 				skipped++;
 				console.error(`Slugify: error renaming "${entry.oldPath}"`, err);
 			}
 		}
 
+		if (succeeded.length > 0) {
+			this.lastBatch = succeeded;
+		}
+
 		new Notice(
 			skipped > 0
-				? t.noticeDoneWithSkipped(done, skipped)
-				: t.noticeDone(done)
+				? t.noticeDoneWithSkipped(succeeded.length, skipped)
+				: t.noticeDone(succeeded.length)
+		);
+	}
+
+	private async undoLastBatch() {
+		const batch = this.lastBatch;
+		if (!batch || batch.length === 0) {
+			new Notice(t.noticeNothingToUndo);
+			return;
+		}
+
+		this.lastBatch = null;
+
+		let done = 0;
+		let skipped = 0;
+
+		for (const { oldPath, newPath } of [...batch].reverse()) {
+			const file = this.app.vault.getAbstractFileByPath(newPath);
+			if (!(file instanceof TFile)) {
+				skipped++;
+				console.warn(`Slugify: cannot undo "${newPath}" -> "${oldPath}" (file not found).`);
+				continue;
+			}
+
+			const collision = this.app.vault.getAbstractFileByPath(oldPath);
+			if (collision && collision !== file) {
+				skipped++;
+				console.warn(`Slugify: cannot undo "${newPath}" -> "${oldPath}" (a file already exists there).`);
+				continue;
+			}
+
+			try {
+				await this.app.fileManager.renameFile(file, oldPath);
+				done++;
+			} catch (err) {
+				skipped++;
+				console.error(`Slugify: error undoing "${newPath}" -> "${oldPath}"`, err);
+			}
+		}
+
+		new Notice(
+			skipped > 0
+				? t.noticeUndoDoneWithSkipped(done, skipped)
+				: t.noticeUndoDone(done)
 		);
 	}
 }

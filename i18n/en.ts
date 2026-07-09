@@ -26,4 +26,9 @@ export default {
 	settingsExcludedFoldersPlaceholder: "templates\nattachments/inbox",
 	settingsSeparatorName: "Separator",
 	settingsSeparatorDesc: "Character used to replace spaces and other non-alphanumeric characters in slugified names.",
+	undoCommandName: "Undo last slugify",
+	noticeNothingToUndo: "Nothing to undo: no slugify batch since Obsidian was opened.",
+	noticeUndoDone: (n: number) => `${n} file(s) restored to their previous name.`,
+	noticeUndoDoneWithSkipped: (done: number, skipped: number) =>
+		`${done} file(s) restored, ${skipped} skipped (see console).`,
 };

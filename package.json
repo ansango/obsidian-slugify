@@ -1,6 +1,6 @@
 {
 	"name": "slugify",
-	"version": "1.0.3",
+	"version": "1.0.4",
 	"description": "Rename files to slug-case and automatically update links.",
 	"main": "main.js",
 	"scripts": {
