@@ -1,5 +1,13 @@
 import { App, ButtonComponent, Modal, Notice, Plugin, PluginSettingTab, Setting, TAbstractFile, TFile, TFolder } from "obsidian";
 import { t } from "./i18n";
+import {
+	annotateCollisions,
+	computeRenames,
+	isExcluded,
+	isRenamableFile,
+	syncNewPath,
+	type RenameEntry as BaseRenameEntry,
+} from "./logic";
 
 interface SlugifySettings {
 	excludedFolders: string[];
@@ -13,46 +21,7 @@ const DEFAULT_SETTINGS: SlugifySettings = {
 	includeAttachments: false,
 };
 
-interface RenameEntry {
-	file: TFile;
-	oldPath: string;
-	parentPath: string;
-	extension: string;
-	slug: string;
-	newPath: string;
-	collision: boolean;
-}
-
-function syncNewPath(entry: RenameEntry): void {
-	entry.newPath = `${entry.parentPath}${entry.slug}.${entry.extension}`;
-}
-
-function escapeRegExp(value: string): string {
-	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function slugify(name: string, separator: string): string {
-	const sep = escapeRegExp(separator);
-	return name
-		.normalize("NFD")
-		.replace(/[̀-ͯ]/g, "") // strip accents
-		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, separator)
-		.replace(new RegExp(`^${sep}+|${sep}+$`, "g"), "")
-		.replace(new RegExp(`${sep}{2,}`, "g"), separator);
-}
-
-function isExcluded(path: string, excludedFolders: string[]): boolean {
-	return excludedFolders.some((folder) => {
-		const normalized = folder.replace(/\/+$/, "");
-		if (!normalized) return false;
-		return path === normalized || path.startsWith(`${normalized}/`);
-	});
-}
-
-function isRenamableFile(file: TFile, includeAttachments: boolean): boolean {
-	return includeAttachments || file.extension === "md";
-}
+type RenameEntry = BaseRenameEntry<TFile>;
 
 function getFilesUnder(folder: TFolder, excludedFolders: string[], includeAttachments: boolean): TFile[] {
 	const files: TFile[] = [];
@@ -86,48 +55,6 @@ function collectFiles(items: TAbstractFile[], excludedFolders: string[], include
 	}
 
 	return [...seen.values()];
-}
-
-function computeRenames(app: App, files: TFile[], separator: string): RenameEntry[] {
-	const renames: RenameEntry[] = [];
-
-	for (const file of files) {
-		const slug = slugify(file.basename, separator);
-		if (!slug || slug === file.basename) continue;
-
-		const parentPath = file.parent && file.parent.path !== "/" ? `${file.parent.path}/` : "";
-
-		const entry: RenameEntry = {
-			file,
-			oldPath: file.path,
-			parentPath,
-			extension: file.extension,
-			slug,
-			newPath: "",
-			collision: false,
-		};
-		syncNewPath(entry);
-
-		if (entry.newPath === file.path) continue;
-
-		renames.push(entry);
-	}
-
-	annotateCollisions(app, renames);
-
-	return renames;
-}
-
-function annotateCollisions(app: App, renames: RenameEntry[]): void {
-	const destCount = new Map<string, number>();
-	for (const r of renames) destCount.set(r.newPath, (destCount.get(r.newPath) ?? 0) + 1);
-
-	for (const r of renames) {
-		const existing = app.vault.getAbstractFileByPath(r.newPath);
-		const existsElsewhere = existing !== null && existing !== r.file;
-		const duplicateTarget = (destCount.get(r.newPath) ?? 0) > 1;
-		r.collision = existsElsewhere || duplicateTarget;
-	}
 }
 
 class SlugifyModal extends Modal {
@@ -170,7 +97,7 @@ class SlugifyModal extends Modal {
 	}
 
 	private renderList() {
-		annotateCollisions(this.app, this.renames);
+		annotateCollisions(this.app.vault, this.renames);
 
 		const applicable = this.renames.filter((r) => !r.collision);
 		const collisions = this.renames.filter((r) => r.collision);
@@ -350,7 +277,7 @@ export default class SlugifyPlugin extends Plugin {
 	}
 
 	private runSlugify(files: TFile[], scopeLabel: string) {
-		const renames = computeRenames(this.app, files, this.settings.separator || "-");
+		const renames = computeRenames(this.app.vault, files, this.settings.separator || "-");
 
 		if (renames.length === 0) {
 			new Notice(t.noticeNothingToRename(scopeLabel));
