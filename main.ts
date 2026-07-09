@@ -1,4 +1,4 @@
-import { App, Modal, Notice, Plugin, PluginSettingTab, Setting, TAbstractFile, TFile, TFolder } from "obsidian";
+import { App, ButtonComponent, Modal, Notice, Plugin, PluginSettingTab, Setting, TAbstractFile, TFile, TFolder } from "obsidian";
 import { t } from "./i18n";
 
 interface SlugifySettings {
@@ -14,8 +14,15 @@ const DEFAULT_SETTINGS: SlugifySettings = {
 interface RenameEntry {
 	file: TFile;
 	oldPath: string;
+	parentPath: string;
+	extension: string;
+	slug: string;
 	newPath: string;
 	collision: boolean;
+}
+
+function syncNewPath(entry: RenameEntry): void {
+	entry.newPath = `${entry.parentPath}${entry.slug}.${entry.extension}`;
 }
 
 function escapeRegExp(value: string): string {
@@ -83,11 +90,21 @@ function computeRenames(app: App, files: TFile[], separator: string): RenameEntr
 		if (!slug || slug === file.basename) continue;
 
 		const parentPath = file.parent && file.parent.path !== "/" ? `${file.parent.path}/` : "";
-		const newPath = `${parentPath}${slug}.${file.extension}`;
 
-		if (newPath === file.path) continue;
+		const entry: RenameEntry = {
+			file,
+			oldPath: file.path,
+			parentPath,
+			extension: file.extension,
+			slug,
+			newPath: "",
+			collision: false,
+		};
+		syncNewPath(entry);
 
-		renames.push({ file, oldPath: file.path, newPath, collision: false });
+		if (entry.newPath === file.path) continue;
+
+		renames.push(entry);
 	}
 
 	annotateCollisions(app, renames);
@@ -111,6 +128,9 @@ class SlugifyModal extends Modal {
 	private renames: RenameEntry[];
 	private onConfirm: () => void;
 	private heading: string;
+	private listEl: HTMLElement;
+	private noteEl: HTMLElement;
+	private applyButton: ButtonComponent;
 
 	constructor(app: App, renames: RenameEntry[], heading: string, onConfirm: () => void) {
 		super(app);
@@ -123,47 +143,64 @@ class SlugifyModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 
+		contentEl.createEl("h2", { text: this.heading });
+		contentEl.createEl("p", { text: t.modalDescription });
+		contentEl.createEl("p", { text: t.modalEditHint, cls: "setting-item-description" });
+
+		this.noteEl = contentEl.createEl("p", { cls: "slugify-collision-note" });
+		this.listEl = contentEl.createEl("div", { cls: "slugify-list" });
+
+		new Setting(contentEl)
+			.addButton((btn) => btn.setButtonText(t.buttonCancel).onClick(() => this.close()))
+			.addButton((btn) => {
+				this.applyButton = btn;
+				btn.setCta().onClick(() => {
+					this.onConfirm();
+					this.close();
+				});
+			});
+
+		this.renderList();
+	}
+
+	private renderList() {
+		annotateCollisions(this.app, this.renames);
+
 		const applicable = this.renames.filter((r) => !r.collision);
 		const collisions = this.renames.filter((r) => r.collision);
 
-		contentEl.createEl("h2", { text: this.heading });
-		contentEl.createEl("p", { text: t.modalDescription });
+		this.noteEl.setText(collisions.length > 0 ? t.collisionNote(collisions.length) : "");
+		this.applyButton.setButtonText(t.buttonApply(applicable.length));
+		this.applyButton.setDisabled(applicable.length === 0);
 
-		if (collisions.length > 0) {
-			contentEl.createEl("p", {
-				text: t.collisionNote(collisions.length),
-				cls: "slugify-collision-note",
-			});
-		}
-
-		const list = contentEl.createEl("div", { cls: "slugify-list" });
+		this.listEl.empty();
 
 		for (const entry of this.renames) {
-			const row = list.createEl("div", {
+			const row = this.listEl.createEl("div", {
 				cls: entry.collision ? "slugify-row slugify-row-collision" : "slugify-row",
 			});
 			row.createSpan({ text: entry.oldPath });
 			row.createSpan({ text: " → " });
-			row.createSpan({ text: entry.newPath, cls: "slugify-new" });
+			row.createSpan({ text: entry.parentPath });
+
+			const input = row.createEl("input", {
+				type: "text",
+				value: entry.slug,
+				cls: "slugify-edit-input",
+			});
+			input.addEventListener("change", () => {
+				const value = input.value.trim();
+				entry.slug = value.length > 0 ? value : entry.slug;
+				syncNewPath(entry);
+				this.renderList();
+			});
+
+			row.createSpan({ text: `.${entry.extension}` });
+
 			if (entry.collision) {
 				row.createSpan({ text: ` (${t.collisionLabel})`, cls: "slugify-collision-label" });
 			}
 		}
-
-		new Setting(contentEl)
-			.addButton((btn) =>
-				btn.setButtonText(t.buttonCancel).onClick(() => this.close())
-			)
-			.addButton((btn) =>
-				btn
-					.setButtonText(t.buttonApply(applicable.length))
-					.setCta()
-					.setDisabled(applicable.length === 0)
-					.onClick(() => {
-						this.onConfirm();
-						this.close();
-					})
-			);
 	}
 
 	onClose() {

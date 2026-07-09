@@ -8,10 +8,21 @@
 
 .slugify-row {
 	margin-bottom: 0.25em;
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 0.15em;
 }
 
-.slugify-new {
+.slugify-edit-input {
 	color: var(--text-accent);
+	font-family: var(--font-monospace);
+	font-size: var(--font-smaller);
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	padding: 0 0.25em;
+	min-width: 4em;
+	flex: 1 1 auto;
 }
 
 .slugify-collision-note {

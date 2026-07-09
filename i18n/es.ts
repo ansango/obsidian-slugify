@@ -11,6 +11,7 @@ export default {
 	modalHeading: (n: number, scope: string) => `Slugify: ${n} archivo(s) en ${scope}`,
 	modalDescription:
 		"Se renombrarán los siguientes archivos y se actualizarán automáticamente los enlaces que los referencian:",
+	modalEditHint: "Puedes editar cualquier nombre propuesto abajo antes de confirmar.",
 	buttonCancel: "Cancelar",
 	buttonApply: (n: number) => `Renombrar ${n} archivo(s)`,
 	noticeDoneWithSkipped: (done: number, skipped: number) =>
