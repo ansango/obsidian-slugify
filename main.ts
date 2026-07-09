@@ -5,6 +5,7 @@ interface RenameEntry {
 	file: TFile;
 	oldPath: string;
 	newPath: string;
+	collision: boolean;
 }
 
 function slugify(name: string): string {
@@ -47,7 +48,7 @@ function collectMarkdownFiles(items: TAbstractFile[]): TFile[] {
 	return [...seen.values()];
 }
 
-function computeRenames(files: TFile[]): RenameEntry[] {
+function computeRenames(app: App, files: TFile[]): RenameEntry[] {
 	const renames: RenameEntry[] = [];
 
 	for (const file of files) {
@@ -59,10 +60,24 @@ function computeRenames(files: TFile[]): RenameEntry[] {
 
 		if (newPath === file.path) continue;
 
-		renames.push({ file, oldPath: file.path, newPath });
+		renames.push({ file, oldPath: file.path, newPath, collision: false });
 	}
 
+	annotateCollisions(app, renames);
+
 	return renames;
+}
+
+function annotateCollisions(app: App, renames: RenameEntry[]): void {
+	const destCount = new Map<string, number>();
+	for (const r of renames) destCount.set(r.newPath, (destCount.get(r.newPath) ?? 0) + 1);
+
+	for (const r of renames) {
+		const existing = app.vault.getAbstractFileByPath(r.newPath);
+		const existsElsewhere = existing !== null && existing !== r.file;
+		const duplicateTarget = (destCount.get(r.newPath) ?? 0) > 1;
+		r.collision = existsElsewhere || duplicateTarget;
+	}
 }
 
 class SlugifyModal extends Modal {
@@ -81,16 +96,31 @@ class SlugifyModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 
+		const applicable = this.renames.filter((r) => !r.collision);
+		const collisions = this.renames.filter((r) => r.collision);
+
 		contentEl.createEl("h2", { text: this.heading });
 		contentEl.createEl("p", { text: t.modalDescription });
+
+		if (collisions.length > 0) {
+			contentEl.createEl("p", {
+				text: t.collisionNote(collisions.length),
+				cls: "slugify-collision-note",
+			});
+		}
 
 		const list = contentEl.createEl("div", { cls: "slugify-list" });
 
 		for (const entry of this.renames) {
-			const row = list.createEl("div", { cls: "slugify-row" });
+			const row = list.createEl("div", {
+				cls: entry.collision ? "slugify-row slugify-row-collision" : "slugify-row",
+			});
 			row.createSpan({ text: entry.oldPath });
 			row.createSpan({ text: " → " });
 			row.createSpan({ text: entry.newPath, cls: "slugify-new" });
+			if (entry.collision) {
+				row.createSpan({ text: ` (${t.collisionLabel})`, cls: "slugify-collision-label" });
+			}
 		}
 
 		new Setting(contentEl)
@@ -99,8 +129,9 @@ class SlugifyModal extends Modal {
 			)
 			.addButton((btn) =>
 				btn
-					.setButtonText(t.buttonApply(this.renames.length))
+					.setButtonText(t.buttonApply(applicable.length))
 					.setCta()
+					.setDisabled(applicable.length === 0)
 					.onClick(() => {
 						this.onConfirm();
 						this.close();
@@ -160,7 +191,7 @@ export default class SlugifyPlugin extends Plugin {
 	onunload() {}
 
 	private runSlugify(files: TFile[], scopeLabel: string) {
-		const renames = computeRenames(files);
+		const renames = computeRenames(this.app, files);
 
 		if (renames.length === 0) {
 			new Notice(t.noticeNothingToRename(scopeLabel));
@@ -180,11 +211,10 @@ export default class SlugifyPlugin extends Plugin {
 		let skipped = 0;
 
 		for (const entry of renames) {
-			const collision = this.app.vault.getAbstractFileByPath(entry.newPath);
-			if (collision && collision !== entry.file) {
+			if (entry.collision) {
 				skipped++;
 				console.warn(
-					`Slugify: skipped "${entry.oldPath}" -> "${entry.newPath}" (a file with that name already exists).`
+					`Slugify: skipped "${entry.oldPath}" -> "${entry.newPath}" (name collision, flagged in preview).`
 				);
 				continue;
 			}

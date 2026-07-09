@@ -1,7 +1,7 @@
 {
 	"id": "slugify",
 	"name": "Slugify",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"minAppVersion": "1.4.0",
 	"description": "Rename files to slug-case (lowercase, no accents, hyphens) and automatically update links using fileManager.renameFile.",
 	"author": "ansango",

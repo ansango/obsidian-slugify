@@ -16,4 +16,7 @@ export default {
 	noticeDoneWithSkipped: (done: number, skipped: number) =>
 		`${done} archivo(s) renombrado(s), ${skipped} omitido(s) (ver consola).`,
 	noticeDone: (done: number) => `${done} archivo(s) renombrado(s) correctamente.`,
+	collisionNote: (n: number) =>
+		`${n} elemento(s) omitido(s) por colisión de nombre con un archivo existente u otro renombrado.`,
+	collisionLabel: "colisión, se omitirá",
 };

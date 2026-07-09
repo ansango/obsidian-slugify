@@ -16,4 +16,7 @@ export default {
 	noticeDoneWithSkipped: (done: number, skipped: number) =>
 		`${done} file(s) renamed, ${skipped} skipped (see console).`,
 	noticeDone: (done: number) => `${done} file(s) renamed successfully.`,
+	collisionNote: (n: number) =>
+		`${n} item(s) skipped due to a name collision with an existing or another renamed file.`,
+	collisionLabel: "collision, will be skipped",
 };

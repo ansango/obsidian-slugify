@@ -13,3 +13,17 @@
 .slugify-new {
 	color: var(--text-accent);
 }
+
+.slugify-collision-note {
+	color: var(--text-error);
+}
+
+.slugify-row-collision {
+	text-decoration: line-through;
+	color: var(--text-muted);
+}
+
+.slugify-collision-label {
+	color: var(--text-error);
+	text-decoration: none;
+}
