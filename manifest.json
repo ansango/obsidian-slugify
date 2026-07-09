@@ -1,6 +1,6 @@
 {
-	"id": "obsidian-slugify",
-	"name": "Obsidian Slugify",
+	"id": "slugify",
+	"name": "Slugify",
 	"version": "1.0.0",
 	"minAppVersion": "1.4.0",
 	"description": "Rename files to slug-case (lowercase, no accents, hyphens) and automatically update links using fileManager.renameFile.",

@@ -84,19 +84,13 @@ class SlugifyModal extends Modal {
 		contentEl.createEl("h2", { text: this.heading });
 		contentEl.createEl("p", { text: t.modalDescription });
 
-		const list = contentEl.createEl("div", { cls: "slugify-filenames-list" });
-		list.style.maxHeight = "300px";
-		list.style.overflowY = "auto";
-		list.style.fontFamily = "var(--font-monospace)";
-		list.style.fontSize = "var(--font-smaller)";
-		list.style.marginBottom = "1em";
+		const list = contentEl.createEl("div", { cls: "slugify-list" });
 
 		for (const entry of this.renames) {
-			const row = list.createEl("div", { cls: "slugify-filenames-row" });
-			row.style.marginBottom = "0.25em";
+			const row = list.createEl("div", { cls: "slugify-row" });
 			row.createSpan({ text: entry.oldPath });
 			row.createSpan({ text: " → " });
-			row.createSpan({ text: entry.newPath, cls: "slugify-filenames-new" });
+			row.createSpan({ text: entry.newPath, cls: "slugify-new" });
 		}
 
 		new Setting(contentEl)
@@ -119,7 +113,7 @@ class SlugifyModal extends Modal {
 	}
 }
 
-export default class SlugifyFilenamesPlugin extends Plugin {
+export default class SlugifyPlugin extends Plugin {
 	async onload() {
 		this.addCommand({
 			id: "slugify-vault-filenames",
@@ -190,7 +184,7 @@ export default class SlugifyFilenamesPlugin extends Plugin {
 			if (collision && collision !== entry.file) {
 				skipped++;
 				console.warn(
-					`Obsidian Slugify: skipped "${entry.oldPath}" -> "${entry.newPath}" (a file with that name already exists).`
+					`Slugify: skipped "${entry.oldPath}" -> "${entry.newPath}" (a file with that name already exists).`
 				);
 				continue;
 			}
@@ -202,7 +196,7 @@ export default class SlugifyFilenamesPlugin extends Plugin {
 				done++;
 			} catch (err) {
 				skipped++;
-				console.error(`Obsidian Slugify: error renaming "${entry.oldPath}"`, err);
+				console.error(`Slugify: error renaming "${entry.oldPath}"`, err);
 			}
 		}
 

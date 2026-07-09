@@ -1,3 +1,15 @@
-.slugify-filenames-new {
+.slugify-list {
+	max-height: 300px;
+	overflow-y: auto;
+	font-family: var(--font-monospace);
+	font-size: var(--font-smaller);
+	margin-bottom: 1em;
+}
+
+.slugify-row {
+	margin-bottom: 0.25em;
+}
+
+.slugify-new {
 	color: var(--text-accent);
 }
